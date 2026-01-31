@@ -1,0 +1,964 @@
+openapi: 3.0.0
+info:
+  title: 'Electronic E-commerce API'
+  description: |-
+    Complete API documentation for Yejara Electronic E-commerce platform.
+
+    ## Features
+    - User authentication with JWT tokens
+    - Product catalog with AI-generated descriptions
+    - Shopping cart and order management
+    - Store branch locations
+
+    ## Architecture
+    This API follows a modular monolith architecture where each module is self-contained.
+
+    ## Base URL
+    - Development: `http://localhost`
+    - Production: `https://api.yejara.com`
+  version: 1.0.0
+  contact:
+    name: 'Yejara API Support'
+    email: api@yejara.com
+  license:
+    name: MIT
+    url: 'https://opensource.org/licenses/MIT'
+servers:
+  -
+    url: 'http://localhost'
+    description: 'Docker development server (port 80)'
+  -
+    url: 'http://localhost:8000'
+    description: 'Local development server (php artisan serve)'
+  -
+    url: 'https://api.yejara.com'
+    description: 'Production server'
+paths:
+  /api/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: 'Register new user'
+      description: 'Create a new user account and return JWT token'
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            examples:
+              newUser:
+                value:
+                  name: 'John Doe'
+                  email: john@example.com
+                  password: password123
+                  password_confirmation: password123
+      responses:
+        201:
+          description: 'Registration successful'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/StandardResponse' }
+                  - { type: object, properties: { data: { $ref: '#/components/schemas/AuthResponse' } } }
+              examples:
+                success:
+                  value: { success: true, data: { access_token: eyJ0eXAiOiJKV1QiLCJhbGc..., token_type: bearer, expires_in: 3600, user: { id: 1, name: 'John Doe', email: john@example.com, username: null, phone: null, profile_status: pending, created_at: '2026-01-30T10:00:00Z', updated_at: '2026-01-30T10:00:00Z' } }, message: 'Registration successful', code: 201 }
+        422:
+          $ref: '#/components/responses/ValidationError'
+  /api/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: 'Login user'
+      description: 'Authenticate user and return JWT token'
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            examples:
+              credentials:
+                value:
+                  email: john@example.com
+                  password: password123
+      responses:
+        200:
+          description: 'Login successful'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/StandardResponse' }
+                  - { type: object, properties: { data: { $ref: '#/components/schemas/AuthResponse' } } }
+              examples:
+                success:
+                  value: { success: true, data: { access_token: eyJ0eXAiOiJKV1QiLCJhbGc..., token_type: bearer, expires_in: 3600, user: { id: 1, name: 'John Doe', email: john@example.com, username: johndoe, phone: '+1234567890', profile_status: completed } }, message: 'Login successful', code: 200 }
+        401:
+          $ref: '#/components/responses/Unauthorized'
+        422:
+          $ref: '#/components/responses/ValidationError'
+  /api/auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: 'Logout user'
+      description: 'Invalidate current JWT token (blacklist)'
+      operationId: logout
+      security:
+        -
+          bearerAuth: {  }
+      responses:
+        200:
+          description: 'Logout successful'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+              examples:
+                success:
+                  value: { success: true, data: null, message: 'Logged out successfully', code: 200 }
+        401:
+          $ref: '#/components/responses/Unauthenticated'
+  /api/auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: 'Refresh JWT token'
+      description: 'Get a new JWT token (blacklists old token)'
+      operationId: refresh
+      security:
+        -
+          bearerAuth: {  }
+      responses:
+        200:
+          description: 'Token refreshed successfully'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/StandardResponse' }
+                  - { type: object, properties: { data: { $ref: '#/components/schemas/TokenResponse' } } }
+              examples:
+                success:
+                  value: { success: true, data: { access_token: eyJ0eXAiOiJKV1QiLCJhbGc..., token_type: bearer, expires_in: 3600 }, message: 'Token refreshed successfully', code: 200 }
+        401:
+          $ref: '#/components/responses/Unauthenticated'
+  /api/auth/me:
+    get:
+      tags:
+        - 'User Profile'
+      summary: 'Get current user'
+      description: 'Get authenticated user information'
+      operationId: me
+      security:
+        -
+          bearerAuth: {  }
+      responses:
+        200:
+          description: 'Successful response'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/StandardResponse' }
+                  - { type: object, properties: { data: { $ref: '#/components/schemas/User' } } }
+              examples:
+                success:
+                  value: { success: true, data: { id: 1, name: 'John Doe', email: john@example.com, username: johndoe, phone: '+1234567890', profile_status: completed, created_at: '2026-01-30T10:00:00Z', updated_at: '2026-01-30T10:00:00Z' }, message: OK, code: 200 }
+        401:
+          $ref: '#/components/responses/Unauthenticated'
+  /api/auth/profile:
+    put:
+      tags:
+        - 'User Profile'
+      summary: 'Update profile'
+      description: 'Update user profile (username, phone, name)'
+      operationId: updateProfile
+      security:
+        -
+          bearerAuth: {  }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+            examples:
+              completeProfile:
+                value:
+                  username: johndoe
+                  phone: '+1234567890'
+                  name: 'John Doe Updated'
+      responses:
+        200:
+          description: 'Profile updated successfully'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/StandardResponse' }
+                  - { type: object, properties: { data: { $ref: '#/components/schemas/User' } } }
+              examples:
+                success:
+                  value: { success: true, data: { id: 1, name: 'John Doe Updated', email: john@example.com, username: johndoe, phone: '+1234567890', profile_status: completed }, message: 'Profile updated successfully', code: 200 }
+        401:
+          $ref: '#/components/responses/Unauthenticated'
+        422:
+          $ref: '#/components/responses/ValidationError'
+  /api/auth/forgot-password:
+    post:
+      tags:
+        - 'Password Management'
+      summary: 'Forgot password'
+      description: 'Send password reset link to email'
+      operationId: forgotPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+            examples:
+              request:
+                value:
+                  email: john@example.com
+      responses:
+        200:
+          description: 'Reset link sent'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+              examples:
+                success:
+                  value: { success: true, data: null, message: 'We have emailed your password reset link', code: 200 }
+        422:
+          $ref: '#/components/responses/ValidationError'
+  /api/auth/reset-password:
+    post:
+      tags:
+        - 'Password Management'
+      summary: 'Reset password'
+      description: 'Reset password with token from email'
+      operationId: resetPassword
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+            examples:
+              reset:
+                value:
+                  email: john@example.com
+                  token: abc123token
+                  password: newpassword123
+                  password_confirmation: newpassword123
+      responses:
+        200:
+          description: 'Password reset successful'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+              examples:
+                success:
+                  value: { success: true, data: null, message: 'Your password has been reset', code: 200 }
+        400:
+          $ref: '#/components/responses/BadRequest'
+        422:
+          $ref: '#/components/responses/ValidationError'
+  /api/auth/change-password:
+    post:
+      tags:
+        - 'Password Management'
+      summary: 'Change password'
+      description: 'Change password (requires current password)'
+      operationId: changePassword
+      security:
+        -
+          bearerAuth: {  }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+            examples:
+              change:
+                value:
+                  current_password: oldpassword123
+                  password: newpassword123
+                  password_confirmation: newpassword123
+      responses:
+        200:
+          description: 'Password changed successfully'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StandardResponse'
+              examples:
+                success:
+                  value: { success: true, data: null, message: 'Password changed successfully', code: 200 }
+        400:
+          $ref: '#/components/responses/BadRequest'
+        401:
+          $ref: '#/components/responses/Unauthenticated'
+        422:
+          $ref: '#/components/responses/ValidationError'
+  /api/branches:
+    get:
+      tags:
+        - Branches
+      summary: 'List branches'
+      description: 'Get cached list of store branches with location data'
+      operationId: listBranches
+      responses:
+        200:
+          description: 'Successful response'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/StandardResponse' }
+                  - { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Branch' } } } }
+              examples:
+                success:
+                  value: { success: true, data: [{ id: 1, name: 'Yejara Central Store', address: '123 Main Street, District 1, Ho Chi Minh City', lat: 10.7769, lng: 106.7009, created_at: '2026-01-30T10:00:00Z', updated_at: '2026-01-30T10:00:00Z' }, { id: 2, name: 'Yejara North Branch', address: '456 Nguyen Trai, Hanoi', lat: 21.0285, lng: 105.8542, created_at: '2026-01-30T10:00:00Z', updated_at: '2026-01-30T10:00:00Z' }], message: OK, code: 200 }
+        401:
+          $ref: '#/components/responses/Unauthenticated'
+        422:
+          $ref: '#/components/responses/ValidationError'
+  /api/cart:
+    get:
+      tags:
+        - Cart
+      summary: 'Get cart'
+      description: 'Get current cart items from session'
+      operationId: getCart
+      responses:
+        200:
+          description: 'Successful response'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/StandardResponse' }
+                  - { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/CartItem' } } } }
+              examples:
+                success:
+                  value: { success: true, data: [{ product_id: 1, product_name: 'Smartphone X', quantity: 2, price: 19999.0 }], message: OK, code: 200 }
+        401:
+          $ref: '#/components/responses/Unauthenticated'
+        422:
+          $ref: '#/components/responses/ValidationError'
+  /api/cart/items:
+    post:
+      tags:
+        - Cart
+      summary: 'Add item to cart'
+      description: 'Add product to cart (session-based)'
+      operationId: addToCart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddToCartRequest'
+            examples:
+              addItem:
+                value:
+                  product_id: 1
+                  quantity: 2
+      responses:
+        200:
+          description: 'Item added to cart'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/StandardResponse' }
+                  - { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/CartItem' } } } }
+              examples:
+                success:
+                  value: { success: true, data: [{ product_id: 1, product_name: 'Smartphone X', quantity: 2, price: 19999.0 }], message: Added, code: 200 }
+        401:
+          $ref: '#/components/responses/Unauthenticated'
+        422:
+          $ref: '#/components/responses/ValidationError'
+  /api/orders/checkout:
+    post:
+      tags:
+        - Orders
+      summary: 'Checkout order'
+      description: 'Create an order from cart items and send confirmation email'
+      operationId: checkoutOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+            examples:
+              cod:
+                value:
+                  payment_method: cod
+              bankTransfer:
+                value:
+                  payment_method: bank_transfer
+      responses:
+        200:
+          description: 'Order created successfully'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/StandardResponse' }
+                  - { type: object, properties: { data: { $ref: '#/components/schemas/Order' } } }
+              examples:
+                success:
+                  value: { success: true, data: { id: 1, user_id: 1, order_number: ORD-A1B2C3D4, status: pending, payment_method: cod, total_amount: 39998.0, created_at: '2026-01-30T10:00:00Z' }, message: Created, code: 200 }
+        401:
+          $ref: '#/components/responses/Unauthenticated'
+        422:
+          $ref: '#/components/responses/ValidationError'
+  /api/products:
+    get:
+      tags:
+        - Products
+      summary: 'List products'
+      description: 'Get cached list of products'
+      operationId: listProducts
+      responses:
+        200:
+          description: 'Successful response'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/StandardResponse' }
+                  - { type: object, properties: { data: { type: array, items: { $ref: '#/components/schemas/Product' } } } }
+              examples:
+                success:
+                  value: { success: true, data: [{ id: 1, name: 'Smartphone X', slug: smartphone-x, description: 'High-end smartphone with AI features', brand_id: 1, category_id: 2, keywords: [smartphone, AI, 5G] }], message: OK, code: 200 }
+        401:
+          $ref: '#/components/responses/Unauthenticated'
+        422:
+          $ref: '#/components/responses/ValidationError'
+    post:
+      tags:
+        - Products
+      summary: 'Create product'
+      description: 'Create a new product with AI-generated description'
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateProductRequest'
+            examples:
+              smartphone:
+                value:
+                  name: 'Smartphone X'
+                  sku: SPX-001
+                  price: 19999.0
+                  keywords: [smartphone, AI, camera]
+      responses:
+        200:
+          description: 'Product created successfully'
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - { $ref: '#/components/schemas/StandardResponse' }
+                  - { type: object, properties: { data: { $ref: '#/components/schemas/Product' } } }
+              examples:
+                success:
+                  value: { success: true, data: { id: 1, name: 'Smartphone X', slug: spx-001, description: null, keywords: [smartphone, AI, camera] }, message: Created, code: 200 }
+        401:
+          $ref: '#/components/responses/Unauthenticated'
+        422:
+          $ref: '#/components/responses/ValidationError'
+components:
+  schemas:
+    StandardResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          nullable: true
+        message:
+          type: string
+          example: OK
+        code:
+          type: integer
+          example: 200
+    RegisterRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+        - password_confirmation
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: 'John Doe'
+        email:
+          type: string
+          format: email
+          maxLength: 255
+          example: john@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: password123
+        password_confirmation:
+          type: string
+          format: password
+          minLength: 8
+          example: password123
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: john@example.com
+        password:
+          type: string
+          format: password
+          example: password123
+    UpdateProfileRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          maxLength: 255
+          example: johndoe
+          description: 'Unique username'
+        phone:
+          type: string
+          maxLength: 20
+          example: '+1234567890'
+        name:
+          type: string
+          maxLength: 255
+          example: 'John Doe Updated'
+    ForgotPasswordRequest:
+      type: object
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          example: john@example.com
+    ResetPasswordRequest:
+      type: object
+      required:
+        - email
+        - token
+        - password
+        - password_confirmation
+      properties:
+        email:
+          type: string
+          format: email
+          example: john@example.com
+        token:
+          type: string
+          example: abc123token
+          description: 'Token from reset email'
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: newpassword123
+        password_confirmation:
+          type: string
+          format: password
+          minLength: 8
+          example: newpassword123
+    ChangePasswordRequest:
+      type: object
+      required:
+        - current_password
+        - password
+        - password_confirmation
+      properties:
+        current_password:
+          type: string
+          format: password
+          example: oldpassword123
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: newpassword123
+        password_confirmation:
+          type: string
+          format: password
+          minLength: 8
+          example: newpassword123
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: 'John Doe'
+        email:
+          type: string
+          format: email
+          example: john@example.com
+        username:
+          type: string
+          nullable: true
+          example: johndoe
+        phone:
+          type: string
+          nullable: true
+          example: '+1234567890'
+        profile_status:
+          type: string
+          enum:
+            - pending
+            - completed
+          example: completed
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-01-30T10:00:00Z'
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-01-30T10:00:00Z'
+    AuthResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          example: eyJ0eXAiOiJKV1QiLCJhbGc...
+          description: 'JWT access token'
+        token_type:
+          type: string
+          example: bearer
+        expires_in:
+          type: integer
+          example: 3600
+          description: 'Token expiration time in seconds'
+        user:
+          $ref: '#/components/schemas/User'
+    TokenResponse:
+      type: object
+      properties:
+        access_token:
+          type: string
+          example: eyJ0eXAiOiJKV1QiLCJhbGc...
+        token_type:
+          type: string
+          example: bearer
+        expires_in:
+          type: integer
+          example: 3600
+    Branch:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: 'Yejara Central Store'
+          description: 'Branch name'
+        address:
+          type: string
+          example: '123 Main Street, District 1, Ho Chi Minh City'
+          description: 'Full address of the branch'
+        lat:
+          type: number
+          format: float
+          example: 10.7769
+          description: 'Latitude coordinate'
+        lng:
+          type: number
+          format: float
+          example: 106.7009
+          description: 'Longitude coordinate'
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-01-30T10:00:00Z'
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-01-30T10:00:00Z'
+    CartItem:
+      type: object
+      properties:
+        product_id:
+          type: integer
+          example: 1
+        product_name:
+          type: string
+          example: 'Smartphone X'
+        quantity:
+          type: integer
+          minimum: 1
+          example: 2
+        price:
+          type: number
+          format: float
+          example: 19999.0
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        order_number:
+          type: string
+          example: ORD-A1B2C3D4
+          description: 'Unique order identifier'
+        status:
+          type: string
+          enum:
+            - pending
+            - confirmed
+            - shipping
+            - delivered
+            - cancelled
+          example: pending
+        payment_method:
+          type: string
+          enum:
+            - cod
+            - bank_transfer
+          example: cod
+        total_amount:
+          type: number
+          format: decimal
+          example: 39998.0
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-01-30T10:00:00Z'
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-01-30T10:00:00Z'
+    AddToCartRequest:
+      type: object
+      required:
+        - product_id
+        - quantity
+      properties:
+        product_id:
+          type: integer
+          minimum: 1
+          example: 1
+          description: 'ID of the product to add'
+        quantity:
+          type: integer
+          minimum: 1
+          example: 2
+          description: 'Quantity to add'
+    CheckoutRequest:
+      type: object
+      required:
+        - payment_method
+      properties:
+        payment_method:
+          type: string
+          enum:
+            - cod
+            - bank_transfer
+          example: cod
+          description: 'Payment method for the order'
+    Product:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: 'Smartphone X'
+        slug:
+          type: string
+          example: smartphone-x
+        brand_id:
+          type: integer
+          nullable: true
+          example: 1
+        category_id:
+          type: integer
+          nullable: true
+          example: 2
+        description:
+          type: string
+          nullable: true
+          example: 'High-end smartphone with advanced AI features and 5G connectivity'
+        keywords:
+          type: array
+          items:
+            type: string
+          nullable: true
+          example:
+            - smartphone
+            - AI
+            - 5G
+        created_at:
+          type: string
+          format: date-time
+          example: '2026-01-30T10:00:00Z'
+        updated_at:
+          type: string
+          format: date-time
+          example: '2026-01-30T10:00:00Z'
+    CreateProductRequest:
+      type: object
+      required:
+        - name
+        - sku
+        - price
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: 'Smartphone X'
+          description: 'Product name'
+        sku:
+          type: string
+          minLength: 1
+          maxLength: 255
+          example: SPX-001
+          description: 'Stock Keeping Unit (will be used as slug)'
+        price:
+          type: number
+          format: float
+          minimum: 0
+          example: 19999.0
+          description: 'Product price'
+        keywords:
+          type: array
+          items:
+            type: string
+          example:
+            - smartphone
+            - AI
+            - camera
+          description: 'Keywords for AI-generated description'
+  responses:
+    Unauthenticated:
+      description: Unauthenticated
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardResponse'
+          examples:
+            error:
+              value:
+                success: false
+                data: null
+                message: Unauthenticated
+                code: 401
+    ValidationError:
+      description: 'Validation error'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardResponse'
+          examples:
+            error:
+              value:
+                success: false
+                data:
+                  errors: { name: ['The name field is required.'] }
+                message: 'Validation failed'
+                code: 422
+    Unauthorized:
+      description: 'Unauthorized - Invalid credentials'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardResponse'
+          examples:
+            error:
+              value:
+                success: false
+                data: null
+                message: 'Invalid credentials'
+                code: 401
+    BadRequest:
+      description: 'Bad request'
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardResponse'
+          examples:
+            invalidToken:
+              value:
+                success: false
+                data: null
+                message: 'This password reset token is invalid'
+                code: 400
+            wrongPassword:
+              value:
+                success: false
+                data: null
+                message: 'Current password is incorrect'
+                code: 400
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: 'JWT token from /api/auth/login or /api/auth/refresh'
+tags:
+  -
+    name: Authentication
+    description: 'User registration, login, logout, and token refresh'
+  -
+    name: 'User Profile'
+    description: 'View and update user profile'
+  -
+    name: 'Password Management'
+    description: 'Forgot password, reset password, and change password'
+  -
+    name: Branches
+    description: 'Store branch locations'
+  -
+    name: Cart
+    description: 'Shopping cart management'
+  -
+    name: Orders
+    description: 'Order processing and checkout'
+  -
+    name: Products
+    description: 'Product catalog management'
+externalDocs:
+  description: 'Find more info in the project README'
+  url: 'https://github.com/technexus/api/blob/main/README.md'

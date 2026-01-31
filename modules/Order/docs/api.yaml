@@ -1,0 +1,277 @@
+openapi: 3.0.0
+info:
+  title: Order Module API
+  description: Shopping cart and order management
+  version: 1.0.0
+
+paths:
+  /api/cart:
+    get:
+      tags:
+        - Cart
+      summary: Get cart
+      description: Get current cart items from session
+      operationId: getCart
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/StandardResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CartItem'
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      - product_id: 1
+                        product_name: "Smartphone X"
+                        quantity: 2
+                        price: 19999.00
+                    message: "OK"
+                    code: 200
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/cart/items:
+    post:
+      tags:
+        - Cart
+      summary: Add item to cart
+      description: Add product to cart (session-based)
+      operationId: addToCart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddToCartRequest'
+            examples:
+              addItem:
+                value:
+                  product_id: 1
+                  quantity: 2
+      responses:
+        '200':
+          description: Item added to cart
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/StandardResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/CartItem'
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      - product_id: 1
+                        product_name: "Smartphone X"
+                        quantity: 2
+                        price: 19999.00
+                    message: "Added"
+                    code: 200
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/orders/checkout:
+    post:
+      tags:
+        - Orders
+      summary: Checkout order
+      description: Create an order from cart items and send confirmation email
+      operationId: checkoutOrder
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+            examples:
+              cod:
+                value:
+                  payment_method: "cod"
+              bankTransfer:
+                value:
+                  payment_method: "bank_transfer"
+      responses:
+        '200':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/StandardResponse'
+                  - type: object
+                    properties:
+                      data:
+                        $ref: '#/components/schemas/Order'
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      id: 1
+                      user_id: 1
+                      order_number: "ORD-A1B2C3D4"
+                      status: "pending"
+                      payment_method: "cod"
+                      total_amount: 39998.00
+                      created_at: "2026-01-30T10:00:00Z"
+                    message: "Created"
+                    code: 200
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+components:
+  schemas:
+    CartItem:
+      type: object
+      properties:
+        product_id:
+          type: integer
+          example: 1
+        product_name:
+          type: string
+          example: "Smartphone X"
+        quantity:
+          type: integer
+          minimum: 1
+          example: 2
+        price:
+          type: number
+          format: float
+          example: 19999.00
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        order_number:
+          type: string
+          example: "ORD-A1B2C3D4"
+          description: Unique order identifier
+        status:
+          type: string
+          enum: [pending, confirmed, shipping, delivered, cancelled]
+          example: "pending"
+        payment_method:
+          type: string
+          enum: [cod, bank_transfer]
+          example: "cod"
+        total_amount:
+          type: number
+          format: decimal
+          example: 39998.00
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-30T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-01-30T10:00:00Z"
+
+    AddToCartRequest:
+      type: object
+      required:
+        - product_id
+        - quantity
+      properties:
+        product_id:
+          type: integer
+          minimum: 1
+          example: 1
+          description: ID of the product to add
+        quantity:
+          type: integer
+          minimum: 1
+          example: 2
+          description: Quantity to add
+
+    CheckoutRequest:
+      type: object
+      required:
+        - payment_method
+      properties:
+        payment_method:
+          type: string
+          enum: [cod, bank_transfer]
+          example: "cod"
+          description: Payment method for the order
+
+    StandardResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          nullable: true
+        message:
+          type: string
+          example: "OK"
+        code:
+          type: integer
+          example: 200
+
+  responses:
+    Unauthenticated:
+      description: Unauthenticated
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardResponse'
+          examples:
+            error:
+              value:
+                success: false
+                data: null
+                message: "Unauthenticated"
+                code: 401
+
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardResponse'
+          examples:
+            error:
+              value:
+                success: false
+                data:
+                  errors:
+                    payment_method: ["The payment method field is required."]
+                message: "Validation failed"
+                code: 422
+
+tags:
+  - name: Cart
+    description: Shopping cart management
+  - name: Orders
+    description: Order processing and checkout

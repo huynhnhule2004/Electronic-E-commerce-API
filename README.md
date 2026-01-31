@@ -17,10 +17,13 @@ Laravel 12 modular monolith for an electronic e-commerce platform.
 
 ## API Docs (Swagger)
 
-- Generate docs:
-  - `docker compose exec app php artisan l5-swagger:generate`
+- Generate docs from YAML:
+  - `docker compose exec app php artisan api:generate-docs`
 - UI:
   - http://localhost/api/documentation
+- Documentation:
+  - [docs/README.md](docs/README.md) - API documentation guide
+  - [docs/GENERATING_DOCS.md](docs/GENERATING_DOCS.md) - Quick start guide
 
 ## Telescope
 
@@ -49,6 +52,7 @@ Each module lives in `modules/<ModuleName>` with Laravel-like structure:
 - routes
 - resources/views
 - tests
+- **docs/api.yaml** - Module API specification
 
 Module docs:
 

@@ -1,0 +1,137 @@
+openapi: 3.0.0
+info:
+  title: Branch Module API
+  description: Store branch management with geo-coordinates
+  version: 1.0.0
+
+paths:
+  /api/branches:
+    get:
+      tags:
+        - Branches
+      summary: List branches
+      description: Get cached list of store branches with location data
+      operationId: listBranches
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/StandardResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Branch'
+              examples:
+                success:
+                  value:
+                    success: true
+                    data:
+                      - id: 1
+                        name: "Yejara Central Store"
+                        address: "123 Main Street, District 1, Ho Chi Minh City"
+                        lat: 10.7769
+                        lng: 106.7009
+                        created_at: "2026-01-30T10:00:00Z"
+                        updated_at: "2026-01-30T10:00:00Z"
+                      - id: 2
+                        name: "Yejara North Branch"
+                        address: "456 Nguyen Trai, Hanoi"
+                        lat: 21.0285
+                        lng: 105.8542
+                        created_at: "2026-01-30T10:00:00Z"
+                        updated_at: "2026-01-30T10:00:00Z"
+                    message: "OK"
+                    code: 200
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+components:
+  schemas:
+    Branch:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "Yejara Central Store"
+          description: Branch name
+        address:
+          type: string
+          example: "123 Main Street, District 1, Ho Chi Minh City"
+          description: Full address of the branch
+        lat:
+          type: number
+          format: float
+          example: 10.7769
+          description: Latitude coordinate
+        lng:
+          type: number
+          format: float
+          example: 106.7009
+          description: Longitude coordinate
+        created_at:
+          type: string
+          format: date-time
+          example: "2026-01-30T10:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2026-01-30T10:00:00Z"
+
+    StandardResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        data:
+          type: object
+          nullable: true
+        message:
+          type: string
+          example: "OK"
+        code:
+          type: integer
+          example: 200
+
+  responses:
+    Unauthenticated:
+      description: Unauthenticated
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardResponse'
+          examples:
+            error:
+              value:
+                success: false
+                data: null
+                message: "Unauthenticated"
+                code: 401
+
+    ValidationError:
+      description: Validation error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/StandardResponse'
+          examples:
+            error:
+              value:
+                success: false
+                data: null
+                message: "Validation failed"
+                code: 422
+
+tags:
+  - name: Branches
+    description: Store branch locations
