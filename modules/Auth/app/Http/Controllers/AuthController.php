@@ -38,6 +38,7 @@ class AuthController extends Controller
         private readonly SendPasswordResetAction $sendPasswordResetAction,
         private readonly ResetPasswordAction $resetPasswordAction,
         private readonly ChangePasswordAction $changePasswordAction,
+        private readonly \Modules\Auth\Actions\GenerateRefreshTokenAction $generateRefreshTokenAction,
     ) {
     }
 
@@ -52,11 +53,13 @@ class AuthController extends Controller
 
             // Auto-login after registration
             $token = Auth::guard('api')->login($user);
+            $refreshToken = $this->generateRefreshTokenAction->execute($user->id);
 
             return response()->json([
                 'success' => true,
                 'data' => [
                     'access_token' => $token,
+                    'refresh_token' => $refreshToken,
                     'token_type' => 'bearer',
                     'expires_in' => Auth::guard('api')->factory()->getTTL() * 60,
                     'user' => new AuthUserResource($user),
@@ -87,6 +90,7 @@ class AuthController extends Controller
                 'success' => true,
                 'data' => [
                     'access_token' => $result['access_token'],
+                    'refresh_token' => $result['refresh_token'],
                     'token_type' => $result['token_type'],
                     'expires_in' => $result['expires_in'],
                     'user' => new AuthUserResource($result['user']),
@@ -131,10 +135,21 @@ class AuthController extends Controller
     /**
      * Refresh JWT token
      */
-    public function refresh(): JsonResponse
+    public function refresh(\Illuminate\Http\Request $request): JsonResponse
     {
         try {
-            $result = $this->refreshAction->execute();
+            $token = $request->input('refresh_token');
+            
+            if (!$token) {
+                return response()->json([
+                    'success' => false,
+                    'data' => null,
+                    'message' => 'Refresh token is required',
+                    'code' => 400,
+                ], 400);
+            }
+
+            $result = $this->refreshAction->execute($token);
 
             return response()->json([
                 'success' => true,

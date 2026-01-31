@@ -45,6 +45,83 @@ paths:
         '422':
           $ref: '#/components/responses/ValidationError'
 
+  /api/categories:
+    get:
+      tags:
+        - Categories
+      summary: List categories
+      description: Get list of categories in tree structure
+      operationId: listCategories
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/StandardResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Category'
+    post:
+      tags:
+        - Categories
+      summary: Create category
+      operationId: createCategory
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name: { type: string }
+                parent_id: { type: integer, nullable: true }
+                icon: { type: string, format: binary, description: 'Small icon for homepage (2MB max)' }
+                image: { type: string, format: binary, description: 'Main banner image (5MB max)' }
+      responses:
+        '201':
+          description: Category created
+        '422':
+          $ref: '#/components/responses/ValidationError'
+
+  /api/categories/{id}:
+    put:
+      tags:
+        - Categories
+      summary: Update category
+      operationId: updateCategory
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                parent_id: { type: integer, nullable: true }
+                icon: { type: string, format: binary }
+                image: { type: string, format: binary }
+      responses:
+        '200':
+          description: Category updated
+    delete:
+      tags:
+        - Categories
+      summary: Delete category
+      operationId: deleteCategory
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        '200':
+          description: Category deleted
+
     post:
       tags:
         - Products
@@ -95,6 +172,20 @@ paths:
 
 components:
   schemas:
+    Category:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        slug: { type: string }
+        parent_id: { type: integer, nullable: true }
+        icon_url: { type: string, nullable: true, description: 'Absolute URL to icon' }
+        image_url: { type: string, nullable: true, description: 'Absolute URL to main image' }
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/Category'
+
     Product:
       type: object
       properties:

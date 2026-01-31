@@ -146,6 +146,18 @@ paths:
       operationId: refresh
       security:
         - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - refresh_token
+              properties:
+                refresh_token:
+                  type: string
+                  example: "a1b2c3d4..."
       responses:
         '200':
           description: Token refreshed successfully
@@ -548,6 +560,10 @@ components:
           type: string
           example: "eyJ0eXAiOiJKV1QiLCJhbGc..."
           description: JWT access token
+        refresh_token:
+          type: string
+          example: "a1b2c3d4..."
+          description: Opaque refresh token (30 days)
         token_type:
           type: string
           example: "bearer"
@@ -564,6 +580,9 @@ components:
         access_token:
           type: string
           example: "eyJ0eXAiOiJKV1QiLCJhbGc..."
+        refresh_token:
+          type: string
+          example: "a1b2c3d4..."
         token_type:
           type: string
           example: "bearer"

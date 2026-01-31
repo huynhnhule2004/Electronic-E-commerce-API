@@ -17,7 +17,11 @@
 - Worker: `docker compose exec worker php artisan queue:work`
 
 ## Swagger
-- Generate docs: `docker compose exec app php artisan l5-swagger:generate`
+- Generate docs:
+    ```bash
+    docker compose exec app php artisan api:merge-docs
+    docker compose exec app php artisan api:generate-docs
+    ```
 - UI: http://localhost/api/documentation
 
 ## Telescope
